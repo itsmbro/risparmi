@@ -21,24 +21,26 @@ def calcola_piano(stipendio_tuo, stipendio_ragazza, percentuale, durata_mesi, ta
             saldo += interesse
 
             # Versamento mensile ogni 30 giorni
+            versamento_effettuato = 0
             if giorno % 30 == 0:
                 saldo += versamento_totale
+                versamento_effettuato = versamento_totale
 
-                # Aggiunta dei dati solo per i mesi completi
-                dati.append({
-                    "Mese": giorno // 30,
-                    "Versamento tuo (€)": round(versamento_tuo, 2),
-                    "Versamento ragazza (€)": round(versamento_ragazza, 2),
-                    "Totale versato (€)": round(versamento_totale, 2),
-                    "Interesse maturato (€)": round(interesse, 2),
-                    "Saldo finale (€)": round(saldo, 2)
-                })
+            # Aggiunta dei dati per ogni giorno
+            dati.append({
+                "Giorno": giorno,
+                "Versamento tuo (€)": round(versamento_tuo if versamento_effettuato else 0, 2),
+                "Versamento ragazza (€)": round(versamento_ragazza if versamento_effettuato else 0, 2),
+                "Totale versato (€)": round(versamento_effettuato, 2),
+                "Interesse maturato (€)": round(interesse, 2),
+                "Saldo finale (€)": round(saldo, 2)
+            })
 
         # Creazione del DataFrame
         df = pd.DataFrame(dati)
 
         # Salvataggio su file Excel
-        file_path = os.path.join(os.getcwd(), 'piano_accumulo_risparmi.xlsx')
+        file_path = os.path.join(os.getcwd(), 'piano_accumulo_risparmi_giornaliero.xlsx')
         df.to_excel(file_path, index=False)
 
         return df, file_path
