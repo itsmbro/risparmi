@@ -3,35 +3,40 @@ import pandas as pd
 from openpyxl import Workbook
 import os
 
-# Funzione che calcola il piano d'accumulo
+# Funzione che calcola il piano d'accumulo con interessi composti giornalieri
 def calcola_piano(stipendio_tuo, stipendio_ragazza, percentuale, durata_mesi, tasso_annuo):
     try:
-        tasso_mensile = tasso_annuo / 12
+        tasso_giornaliero = tasso_annuo / 365
         versamento_tuo = stipendio_tuo * percentuale
         versamento_ragazza = stipendio_ragazza * percentuale
+        versamento_totale = versamento_tuo + versamento_ragazza
 
         saldo = 0
         dati = []
-        
-        # Calcolo mese per mese
-        for mese in range(1, durata_mesi + 1):
-            versamento_totale = versamento_tuo + versamento_ragazza
-            interesse = saldo * tasso_mensile
-            saldo += versamento_totale + interesse
-            
-            # Aggiunta dei dati
-            dati.append({
-                "Mese": mese,
-                "Versamento tuo (€)": round(versamento_tuo, 2),
-                "Versamento ragazza (€)": round(versamento_ragazza, 2),
-                "Totale versato (€)": round(versamento_totale, 2),
-                "Interesse maturato (€)": round(interesse, 2),
-                "Saldo finale (€)": round(saldo, 2)
-            })
-        
+        giorni_totali = durata_mesi * 30  # Approccio semplificato: 30 giorni al mese
+
+        # Calcolo giorno per giorno
+        for giorno in range(1, giorni_totali + 1):
+            interesse = saldo * tasso_giornaliero
+            saldo += interesse
+
+            # Versamento mensile ogni 30 giorni
+            if giorno % 30 == 0:
+                saldo += versamento_totale
+
+                # Aggiunta dei dati solo per i mesi completi
+                dati.append({
+                    "Mese": giorno // 30,
+                    "Versamento tuo (€)": round(versamento_tuo, 2),
+                    "Versamento ragazza (€)": round(versamento_ragazza, 2),
+                    "Totale versato (€)": round(versamento_totale, 2),
+                    "Interesse maturato (€)": round(interesse, 2),
+                    "Saldo finale (€)": round(saldo, 2)
+                })
+
         # Creazione del DataFrame
         df = pd.DataFrame(dati)
-        
+
         # Salvataggio su file Excel
         file_path = os.path.join(os.getcwd(), 'piano_accumulo_risparmi.xlsx')
         df.to_excel(file_path, index=False)
@@ -41,7 +46,7 @@ def calcola_piano(stipendio_tuo, stipendio_ragazza, percentuale, durata_mesi, ta
         return None, "Errore nei dati inseriti. Assicurati di inserire valori numerici validi."
 
 # Interfaccia utente con Streamlit
-st.title("Piano d'Accumulazione Risparmi")
+st.title("Piano d'Accumulazione Risparmi (Interesse Giornaliero)")
 
 # Input dell'utente
 stipendio_tuo = st.number_input("Stipendio tuo (€)", min_value=0.0, format="%.2f")
@@ -63,4 +68,3 @@ if st.button("Calcola Piano"):
             st.error(result)
     else:
         st.error("Assicurati di inserire valori validi per tutti i campi.")
-
