@@ -2,9 +2,9 @@ import requests
 import json
 
 # GitHub token e repository
-GITHUB_TOKEN = "secrets.GITHUB_TOKEN"  # Utilizza il token salvato nei secrets
-REPO_OWNER = "tuo_username"
-REPO_NAME = "budget_app"
+GITHUB_TOKEN = "GITHUB_TOKEN"  # Utilizza il token salvato nei secrets
+REPO_OWNER = "itsmbro"
+REPO_NAME = "risparmi"
 FILE_PATH = "budget_data.json"
 
 # Header per l'autenticazione
