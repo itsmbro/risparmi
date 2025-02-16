@@ -23,5 +23,10 @@
             "Risparmi": 700,
             "Caccole di troll ": 500000.0
         }
+    },
+    "pre_convivenza": {
+        "categorie": {
+            "Ristrutturazione": 2000.0
+        }
     }
 }
