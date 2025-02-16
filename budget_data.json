@@ -1,0 +1,26 @@
+{
+  "preconvivenza": {
+    "budget_totale": 0,
+    "categorie": {
+      "Ristrutturazione": 0,
+      "Cucina": 0,
+      "Bagno": 0,
+      "Mobili": 0
+    }
+  },
+  "convivenza": {
+    "budget_totale": 3000,
+    "categorie": {
+      "Bollette": 500,
+      "Spesa": 300,
+      "Affitto": 800,
+      "Finanziamenti": 200,
+      "Trasporti": 100,
+      "Salute e benessere": 50,
+      "Intrattenimento e tempo libero": 150,
+      "Arredamento e manutenzione casa": 100,
+      "Svago": 100,
+      "Risparmi": 700
+    }
+  }
+}
