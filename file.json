@@ -1,13 +1,4 @@
 {
-    "preconvivenza": {
-        "budget_totale": 0,
-        "categorie": {
-            "Ristrutturazione": 0,
-            "Cucina": 0,
-            "Bagno": 0,
-            "Mobili": 0
-        }
-    },
     "convivenza": {
         "budget_totale": 3000,
         "categorie": {
