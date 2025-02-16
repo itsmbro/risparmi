@@ -20,9 +20,9 @@ def leggi_dati():
     response = requests.get(url, headers=headers)
     
     if response.status_code == 200:
-        content = response.json()
-        file_content = requests.get(content['download_url']).text
-        return json.loads(file_content)
+        return file_content = response.json()
+        #file_content = requests.get(content['download_url']).text
+        #return json.loads(file_content)
     else:
         st.error(f"Errore nel leggere il file: {response.status_code}")
         return {}
