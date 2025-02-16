@@ -1,5 +1,5 @@
 import streamlit as st
-from data_handler import leggi_dati, aggiorna_voce
+from data_handler import leggi_dati, scrivi_dati
 
 # Funzione per visualizzare e aggiornare le spese pre-convivenza
 def gestione_spese_preconvivenza():
@@ -19,5 +19,5 @@ def gestione_spese_preconvivenza():
     valore = st.number_input("Importo per la categoria", min_value=0, step=50)
     
     if st.button("Aggiungi/Modifica Categoria"):
-        aggiorna_voce(categoria, valore, 'preconvivenza')
+        scrivi_dati(categoria, valore, 'preconvivenza')
         st.success(f"Categoria '{categoria}' aggiornata con {valore}€")
