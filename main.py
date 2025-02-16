@@ -3,7 +3,6 @@ import json
 import requests
 import base64
 import matplotlib.pyplot as plt
-import numpy as np
 
 # Configurazione GitHub
 GITHUB_USER = "itsmbro"  # Sostituisci con il tuo nome utente GitHub
@@ -62,7 +61,7 @@ if data:
     st.write(data)  # Mostra il JSON caricato
 
 # Menu di navigazione
-menu = ["Pre-convivenza", "Convivenza", "Visualizza JSON", "Visualizza Grafici"]
+menu = ["Pre-convivenza", "Convivenza"]
 choice = st.sidebar.selectbox("Seleziona una sezione", menu)
 
 # Funzione per la gestione delle spese pre-convivenza
@@ -81,6 +80,17 @@ def gestione_pre_convivenza(data):
             save_json_to_github(data)
         else:
             st.warning("Inserisci un nome e un importo validi.")
+    
+    # Grafico a torta per la Pre-convivenza
+    if "pre_convivenza" in data:
+        categories = list(data["pre_convivenza"]["categorie"].keys())
+        amounts = list(data["pre_convivenza"]["categorie"].values())
+
+        # Grafico a torta
+        fig, ax = plt.subplots()
+        ax.pie(amounts, labels=categories, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        st.pyplot(fig)
 
 # Funzione per la gestione delle spese durante la convivenza
 def gestione_convivenza(data):
@@ -98,11 +108,8 @@ def gestione_convivenza(data):
             save_json_to_github(data)
         else:
             st.warning("Inserisci un nome e un importo validi.")
-
-# Funzione per visualizzare i grafici
-def visualizza_grafico(data):
-    st.header("Visualizza Grafici")
-
+    
+    # Grafico a torta per la Convivenza
     if "convivenza" in data:
         categories = list(data["convivenza"]["categorie"].keys())
         amounts = list(data["convivenza"]["categorie"].values())
@@ -113,27 +120,8 @@ def visualizza_grafico(data):
         ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
         st.pyplot(fig)
 
-    if "pre_convivenza" in data:
-        categories = list(data["pre_convivenza"]["categorie"].keys())
-        amounts = list(data["pre_convivenza"]["categorie"].values())
-
-        # Grafico a torta
-        fig, ax = plt.subplots()
-        ax.pie(amounts, labels=categories, autopct='%1.1f%%', startangle=90)
-        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-        st.pyplot(fig)
-
-# Funzione per visualizzare il JSON
-def visualizza_json(data):
-    st.header("Visualizza JSON")
-    st.json(data)
-
 # Gestione delle scelte del menu
 if choice == "Pre-convivenza":
     gestione_pre_convivenza(data)
 elif choice == "Convivenza":
     gestione_convivenza(data)
-elif choice == "Visualizza JSON":
-    visualizza_json(data)
-elif choice == "Visualizza Grafici":
-    visualizza_grafico(data)
