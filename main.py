@@ -1,127 +1,110 @@
 import streamlit as st
-import json
 import requests
+import json
 
-# GitHub token e repository
-GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]  # Usa il token dal secrets di Streamlit
-REPO_OWNER = "itsmbro"  # Sostituisci con il tuo username GitHub
-REPO_NAME = "risparmi"  # Sostituisci con il nome del tuo repository
-FILE_PATH = "budget_data.json"  # Percorso del file JSON nel repository
-
-# Header per l'autenticazione GitHub
-headers = {
-    "Authorization": f"token {GITHUB_TOKEN}",
-    "Accept": "application/vnd.github.v3.raw",
-}
-
-# Funzione per leggere i dati dal file JSON su GitHub
-def leggi_dati():
-    url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{FILE_PATH}"
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
-        file_content = response.json()
-        #file_content = requests.get(content['download_url']).text
-        return file_content
-    else:
-        st.error(f"Errore nel leggere il file: {response.status_code}")
-        return {}
-
-# Funzione per scrivere i dati nel file JSON su GitHub
-def scrivi_dati(dati):
-    url = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/contents/{FILE_PATH}"
-    file_content = json.dumps(dati, indent=4)
-    data = {
-        "message": "Aggiornamento dati budget",
-        "content": file_content.encode('utf-8').decode('utf-8'),
-        "branch": "main"
+# Funzione per interagire con GitHub API
+def get_github_data():
+    url = 'https://api.github.com/repos/itsmbro/risparmi/contents/file.json'
+    headers = {
+        'Authorization': f'token {st.secrets["GITHUB_TOKEN"]}'
     }
-    response = requests.put(url, json=data, headers=headers)
-    
-    if response.status_code == 201:
-        st.success("Dati aggiornati con successo!")
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        file_content = response.json()['content']
+        file_data = json.loads(requests.utils.unquote(file_content))
+        return file_data
     else:
-        st.error(f"Errore nel salvare i dati: {response.status_code}")
+        st.error(f"Errore nel recupero dei dati da GitHub: {response.status_code}")
+        return None
 
-# Funzione per aggiungere una nuova voce di spesa
-def aggiungi_voce_spesa(dati, categoria, importo):
-    if categoria not in dati:
-        dati[categoria] = importo
+def update_github_data(data):
+    url = 'https://api.github.com/repos/tuo-utente/tuo-repository/contents/file.json'
+    headers = {
+        'Authorization': f'token {st.secrets["GITHUB_TOKEN"]}',
+    }
+    data_json = json.dumps(data)
+    message = "Aggiornamento del file JSON tramite Streamlit."
+    payload = {
+        "message": message,
+        "content": requests.utils.quote(data_json),
+        "sha": get_github_data()['sha']
+    }
+    response = requests.put(url, headers=headers, json=payload)
+    if response.status_code == 200:
+        st.success("File aggiornato con successo!")
     else:
-        st.warning(f"La categoria {categoria} esiste già.")
-    return dati
+        st.error(f"Errore nell'aggiornamento del file su GitHub: {response.status_code}")
+
+# Funzione per visualizzare la dashboard (grafico a torta)
+def plot_pie_chart(categories, title):
+    import matplotlib.pyplot as plt
+
+    labels = list(categories.keys())
+    values = list(categories.values())
+
+    fig, ax = plt.subplots()
+    ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=90)
+    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    
+    st.pyplot(fig)
+
+# Funzione per aggiungere una voce di spesa
+def add_expense(data, phase, category, amount):
+    if category and amount > 0:
+        data[phase]["categorie"][category] = amount
+        update_github_data(data)
+    else:
+        st.error("Categoria o importo non validi")
 
 # Funzione per rimuovere una voce di spesa
-def rimuovi_voce_spesa(dati, categoria):
-    if categoria in dati:
-        del dati[categoria]
+def remove_expense(data, phase, category):
+    if category in data[phase]["categorie"]:
+        del data[phase]["categorie"][category]
+        update_github_data(data)
     else:
-        st.warning(f"La categoria {categoria} non esiste.")
-    return dati
+        st.error("Categoria non esistente")
 
-# Leggi i dati dal repository GitHub
-dati_budget = leggi_dati()
+# Funzione principale
+def main():
+    # Carica i dati iniziali dal file JSON su GitHub
+    data = get_github_data()
+    if not data:
+        return
 
-# UI Streamlit
-st.title("Gestione Spese Pre-Convivente e Convivenza")
-st.sidebar.header("Seleziona la funzionalità")
+    # Barra laterale per navigazione
+    phase = st.sidebar.radio("Seleziona la fase", ("Pre-convivenza", "Convivenza"))
 
-# Sezione per la gestione pre-convivenza
-if st.sidebar.radio("Seleziona la fase:", ["Pre-Convivente", "Convivenza"]) == "Pre-Convivente":
-    st.subheader("Gestione delle spese pre-convivenza")
-    
-    # Visualizza le voci di spesa attuali
-    st.write("Spese attuali:", dati_budget.get("preconvivenza", {}).get("categorie", {}))
-    
-    # Aggiungi una nuova voce di spesa
-    categoria = st.text_input("Categoria di spesa")
-    importo = st.number_input("Importo", min_value=0, step=1)
+    # Visualizzazione dei dati per la fase selezionata
+    if phase == "Pre-convivenza":
+        st.title("Fase Pre-convivenza")
+        categories = data["preconvivenza"]["categorie"]
+        plot_pie_chart(categories, "Spese Pre-convivenza")
+
+    elif phase == "Convivenza":
+        st.title("Fase Convivenza")
+        categories = data["convivenza"]["categorie"]
+        plot_pie_chart(categories, "Spese Convivenza")
+
+    # Aggiungi o rimuovi voci di spesa
+    category = st.text_input("Nome categoria")
+    amount = st.number_input("Importo spesa", min_value=0.0, step=0.01)
+
     if st.button("Aggiungi voce di spesa"):
-        if categoria and importo:
-            dati_budget["preconvivenza"]["categorie"] = aggiungi_voce_spesa(
-                dati_budget.get("preconvivenza", {}).get("categorie", {}), categoria, importo
-            )
-            scrivi_dati(dati_budget)
-        else:
-            st.error("Compila tutti i campi.")
+        if phase == "Pre-convivenza":
+            add_expense(data, "preconvivenza", category, amount)
+        elif phase == "Convivenza":
+            add_expense(data, "convivenza", category, amount)
 
-    # Rimuovi una voce di spesa
-    categoria_da_rimuovere = st.text_input("Categoria da rimuovere")
+    remove_category = st.selectbox("Seleziona categoria da rimuovere", options=list(categories.keys()))
     if st.button("Rimuovi voce di spesa"):
-        if categoria_da_rimuovere:
-            dati_budget["preconvivenza"]["categorie"] = rimuovi_voce_spesa(
-                dati_budget.get("preconvivenza", {}).get("categorie", {}), categoria_da_rimuovere
-            )
-            scrivi_dati(dati_budget)
-        else:
-            st.error("Compila tutti i campi.")
+        if phase == "Pre-convivenza":
+            remove_expense(data, "preconvivenza", remove_category)
+        elif phase == "Convivenza":
+            remove_expense(data, "convivenza", remove_category)
 
-# Sezione per la gestione delle spese quotidiane (convivenza)
-elif st.sidebar.radio("Seleziona la fase:", ["Pre-Convivente", "Convivenza"]) == "Convivenza":
-    st.subheader("Gestione delle spese quotidiane")
-    
-    # Visualizza le voci di spesa attuali
-    st.write("Spese attuali:", dati_budget.get("convivenza", {}).get("categorie", {}))
+    # Mostra le spese correnti
+    st.write(f"Spese attuali per {phase}:")
+    st.write(categories)
 
-    # Aggiungi una nuova voce di spesa
-    categoria = st.text_input("Categoria di spesa")
-    importo = st.number_input("Importo", min_value=0, step=1)
-    if st.button("Aggiungi voce di spesa"):
-        if categoria and importo:
-            dati_budget["convivenza"]["categorie"] = aggiungi_voce_spesa(
-                dati_budget.get("convivenza", {}).get("categorie", {}), categoria, importo
-            )
-            scrivi_dati(dati_budget)
-        else:
-            st.error("Compila tutti i campi.")
-
-    # Rimuovi una voce di spesa
-    categoria_da_rimuovere = st.text_input("Categoria da rimuovere")
-    if st.button("Rimuovi voce di spesa"):
-        if categoria_da_rimuovere:
-            dati_budget["convivenza"]["categorie"] = rimuovi_voce_spesa(
-                dati_budget.get("convivenza", {}).get("categorie", {}), categoria_da_rimuovere
-            )
-            scrivi_dati(dati_budget)
-        else:
-            st.error("Compila tutti i campi.")
+if __name__ == "__main__":
+    main()
