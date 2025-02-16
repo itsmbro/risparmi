@@ -1,110 +1,139 @@
 import streamlit as st
-import requests
 import json
+import requests
+import base64
+import matplotlib.pyplot as plt
+import numpy as np
 
-# Funzione per interagire con GitHub API
-def get_github_data():
-    url = 'https://api.github.com/repos/itsmbro/risparmi/contents/file.json'
-    headers = {
-        'Authorization': f'token {st.secrets["GITHUB_TOKEN"]}'
-    }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        file_content = response.json()['content']
-        file_data = json.loads(requests.utils.unquote(file_content))
-        return file_data
-    else:
-        st.error(f"Errore nel recupero dei dati da GitHub: {response.status_code}")
+# Configurazione GitHub
+GITHUB_USER = "itsmbro"  # Sostituisci con il tuo nome utente GitHub
+GITHUB_REPO = "risparmi"    # Sostituisci con il tuo repository GitHub
+GITHUB_BRANCH = "main"       # Sostituisci con il nome del branch del tuo repository
+GITHUB_FILE_PATH = "file.json"  # Sostituisci con il percorso del tuo file JSON
+
+# Funzione per caricare il JSON da GitHub
+def load_json_from_github():
+    url = f"https://raw.githubusercontent.com/{GITHUB_USER}/{GITHUB_REPO}/{GITHUB_BRANCH}/{GITHUB_FILE_PATH}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Solleva un'eccezione se il codice di stato non è 200
+        return response.json()
+    except requests.exceptions.HTTPError as http_err:
+        st.error(f"Errore HTTP: {http_err}")
+        return None
+    except Exception as err:
+        st.error(f"Errore: {err}")
         return None
 
-def update_github_data(data):
-    url = 'https://api.github.com/repos/tuo-utente/tuo-repository/contents/file.json'
+# Funzione per salvare il JSON su GitHub
+def save_json_to_github(data):
+    url = f"https://api.github.com/repos/{GITHUB_USER}/{GITHUB_REPO}/contents/{GITHUB_FILE_PATH}"
     headers = {
-        'Authorization': f'token {st.secrets["GITHUB_TOKEN"]}',
+        "Authorization": f"token {st.secrets['GITHUB_TOKEN']}",
+        "Accept": "application/vnd.github.v3+json"
     }
-    data_json = json.dumps(data)
-    message = "Aggiornamento del file JSON tramite Streamlit."
-    payload = {
-        "message": message,
-        "content": requests.utils.quote(data_json),
-        "sha": get_github_data()['sha']
-    }
-    response = requests.put(url, headers=headers, json=payload)
-    if response.status_code == 200:
-        st.success("File aggiornato con successo!")
-    else:
-        st.error(f"Errore nell'aggiornamento del file su GitHub: {response.status_code}")
-
-# Funzione per visualizzare la dashboard (grafico a torta)
-def plot_pie_chart(categories, title):
-    import matplotlib.pyplot as plt
-
-    labels = list(categories.keys())
-    values = list(categories.values())
-
-    fig, ax = plt.subplots()
-    ax.pie(values, labels=labels, autopct='%1.1f%%', startangle=90)
-    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
     
-    st.pyplot(fig)
+    # Otteniamo il "sha" del file esistente per aggiornare il contenuto
+    response = requests.get(url, headers=headers)
+    sha = response.json().get("sha") if response.status_code == 200 else None
 
-# Funzione per aggiungere una voce di spesa
-def add_expense(data, phase, category, amount):
-    if category and amount > 0:
-        data[phase]["categorie"][category] = amount
-        update_github_data(data)
+    json_data = json.dumps(data, ensure_ascii=False, indent=4)
+    json_base64 = base64.b64encode(json_data.encode()).decode()
+
+    data_to_commit = {
+        "message": "Aggiornamento delle spese",
+        "content": json_base64,
+        "branch": GITHUB_BRANCH
+    }
+
+    if sha:
+        data_to_commit["sha"] = sha
+
+    response = requests.put(url, headers=headers, json=data_to_commit)
+    
+    if response.status_code in [200, 201]:
+        st.success("File JSON aggiornato con successo!")
     else:
-        st.error("Categoria o importo non validi")
+        st.error(f"Errore nell'aggiornamento: {response.json()}")
 
-# Funzione per rimuovere una voce di spesa
-def remove_expense(data, phase, category):
-    if category in data[phase]["categorie"]:
-        del data[phase]["categorie"][category]
-        update_github_data(data)
-    else:
-        st.error("Categoria non esistente")
+# Caricamento dei dati dal JSON di GitHub
+data = load_json_from_github()
+if data:
+    st.write(data)  # Mostra il JSON caricato
 
-# Funzione principale
-def main():
-    # Carica i dati iniziali dal file JSON su GitHub
-    data = get_github_data()
-    if not data:
-        return
+# Menu di navigazione
+menu = ["Pre-convivenza", "Convivenza", "Visualizza JSON", "Visualizza Grafici"]
+choice = st.sidebar.selectbox("Seleziona una sezione", menu)
 
-    # Barra laterale per navigazione
-    phase = st.sidebar.radio("Seleziona la fase", ("Pre-convivenza", "Convivenza"))
-
-    # Visualizzazione dei dati per la fase selezionata
-    if phase == "Pre-convivenza":
-        st.title("Fase Pre-convivenza")
-        categories = data["preconvivenza"]["categorie"]
-        plot_pie_chart(categories, "Spese Pre-convivenza")
-
-    elif phase == "Convivenza":
-        st.title("Fase Convivenza")
-        categories = data["convivenza"]["categorie"]
-        plot_pie_chart(categories, "Spese Convivenza")
-
-    # Aggiungi o rimuovi voci di spesa
-    category = st.text_input("Nome categoria")
-    amount = st.number_input("Importo spesa", min_value=0.0, step=0.01)
-
+# Funzione per la gestione delle spese pre-convivenza
+def gestione_pre_convivenza(data):
+    st.header("Gestione delle Spese Pre-Convivenza")
+    
+    if "pre_convivenza" not in data:
+        data["pre_convivenza"] = {"categorie": {}}
+    
+    category = st.text_input("Aggiungi categoria (pre-convivenza)")
+    amount = st.number_input("Importo", min_value=0.0)
+    
     if st.button("Aggiungi voce di spesa"):
-        if phase == "Pre-convivenza":
-            add_expense(data, "preconvivenza", category, amount)
-        elif phase == "Convivenza":
-            add_expense(data, "convivenza", category, amount)
+        if category and amount > 0:
+            data["pre_convivenza"]["categorie"][category] = amount
+            save_json_to_github(data)
+        else:
+            st.warning("Inserisci un nome e un importo validi.")
 
-    remove_category = st.selectbox("Seleziona categoria da rimuovere", options=list(categories.keys()))
-    if st.button("Rimuovi voce di spesa"):
-        if phase == "Pre-convivenza":
-            remove_expense(data, "preconvivenza", remove_category)
-        elif phase == "Convivenza":
-            remove_expense(data, "convivenza", remove_category)
+# Funzione per la gestione delle spese durante la convivenza
+def gestione_convivenza(data):
+    st.header("Gestione delle Spese Convivenza")
+    
+    if "convivenza" not in data:
+        data["convivenza"] = {"categorie": {}}
+    
+    category = st.text_input("Aggiungi categoria (convivenza)")
+    amount = st.number_input("Importo", min_value=0.0)
+    
+    if st.button("Aggiungi voce di spesa"):
+        if category and amount > 0:
+            data["convivenza"]["categorie"][category] = amount
+            save_json_to_github(data)
+        else:
+            st.warning("Inserisci un nome e un importo validi.")
 
-    # Mostra le spese correnti
-    st.write(f"Spese attuali per {phase}:")
-    st.write(categories)
+# Funzione per visualizzare i grafici
+def visualizza_grafico(data):
+    st.header("Visualizza Grafici")
 
-if __name__ == "__main__":
-    main()
+    if "convivenza" in data:
+        categories = list(data["convivenza"]["categorie"].keys())
+        amounts = list(data["convivenza"]["categorie"].values())
+
+        # Grafico a torta
+        fig, ax = plt.subplots()
+        ax.pie(amounts, labels=categories, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        st.pyplot(fig)
+
+    if "pre_convivenza" in data:
+        categories = list(data["pre_convivenza"]["categorie"].keys())
+        amounts = list(data["pre_convivenza"]["categorie"].values())
+
+        # Grafico a torta
+        fig, ax = plt.subplots()
+        ax.pie(amounts, labels=categories, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        st.pyplot(fig)
+
+# Funzione per visualizzare il JSON
+def visualizza_json(data):
+    st.header("Visualizza JSON")
+    st.json(data)
+
+# Gestione delle scelte del menu
+if choice == "Pre-convivenza":
+    gestione_pre_convivenza(data)
+elif choice == "Convivenza":
+    gestione_convivenza(data)
+elif choice == "Visualizza JSON":
+    visualizza_json(data)
+elif choice == "Visualizza Grafici":
+    visualizza_grafico(data)
