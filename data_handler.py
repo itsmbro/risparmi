@@ -2,7 +2,7 @@ import requests
 import json
 
 # GitHub token e repository
-GITHUB_TOKEN = "GITHUB_TOKEN"  # Utilizza il token salvato nei secrets
+GITHUB_TOKEN = "secrets.GITHUB_TOKEN"  # Utilizza il token salvato nei secrets
 REPO_OWNER = "itsmbro"
 REPO_NAME = "risparmi"
 FILE_PATH = "budget_data.json"
@@ -21,8 +21,10 @@ def leggi_dati():
     if response.status_code == 200:
         content = response.json()
         file_content = requests.get(content['download_url']).text
+        print("Dati letti correttamente:", file_content)  # Aggiungi questa riga per debug
         return json.loads(file_content)
     else:
+        print(f"Errore nel leggere il file: {response.status_code}")  # Debugging
         return {}
 
 # Funzione per scrivere i dati nel file JSON su GitHub
@@ -35,15 +37,6 @@ def scrivi_dati(dati):
         "branch": "main"
     }
     response = requests.put(url, json=data, headers=headers)
+    
+    print(f"Stato della scrittura: {response.status_code}")  # Debugging
     return response.status_code
-
-# Funzione per aggiornare una voce di spesa
-def aggiorna_voce(categoria, valore, fase):
-    dati = leggi_dati()
-    if fase not in dati:
-        dati[fase] = {"budget_totale": 0, "categorie": {}}
-    if categoria in dati[fase]["categorie"]:
-        dati[fase]["categorie"][categoria] = valore
-    else:
-        dati[fase]["categorie"][categoria] = valore
-    scrivi_dati(dati)
