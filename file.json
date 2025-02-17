@@ -27,7 +27,8 @@
     "pre_convivenza": {
         "categorie": {
             "Ristrutturazione": 2000.0,
-            "Bagno": 2000.0
+            "Bagno": 2000.0,
+            "Bagno ": 500.0
         }
     }
 }
